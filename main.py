@@ -1,13 +1,28 @@
-from fastapi import FastAPI, APIRouter
-from api.auth_handler import auth_router
+import uuid
 
+from fastapi import FastAPI
+from fastapi_users import FastAPIUsers
 
-def get_application() -> FastAPI:
-    application = FastAPI()
-    application.include_router(core_router, prefix="/core", tags=["core"])
-    application.include_router(auth_router, prefix="/auth", tags=["auth"])
-    return application
+from api.auth import auth_backend
+from api.manager import get_user_manager
+from api.schemas import UserRead, UserCreate
+from db.database import User
 
+fastapi_users = FastAPIUsers[User, int](
+    get_user_manager,
+    [auth_backend],
+)
 
-app = get_application()
+app = FastAPI(title="Auth microservice")
 
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    tags=["auth"],
+)
+
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
