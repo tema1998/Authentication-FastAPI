@@ -1,33 +1,56 @@
-version: '3'
-
 services:
-  pgdb-auth:
-    container_name: pgdb-auth
+  auth_service:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8081:8081" #TODO to delete on prod
+    depends_on:
+      db_auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db_auth:
     image: postgres:15
-    restart: always
+    container_name: db_auth
+    environment:
+      POSTGRES_DB: ${AUTH_DB}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
     volumes:
-      - pgdbdatas:/var/lib/postgresql/data/
-    env_file:
-      - .env
-    ports:
-      - '5433:5432'
-    networks:
-      - pg
-  pgadmin-auth:
-    container_name: pgadmin-auth
-    image: dpage/pgadmin4
+      - db_auth:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     restart: always
-    volumes:
-      - pgadmin-auth:/var/lib/pgadmin
-    env_file:
-      - .env
     ports:
-      - '8080:80'
-    networks:
-      - pg
+      - "5433:5432" #TODO to delete on prod
+
+  redis:
+    image: redis:5.0.7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379" #TODO to delete on prod
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one:latest
+    depends_on:
+      - auth_service
+    ports:
+      - '6831:6831/udp' #TODO to delete on prod
+      - "16686:16686"  #TODO to delete on prod
+
 volumes:
-  pgdbdatas:
-  pgadmin-auth:
-networks:
-  pg:
-    driver: bridge
+  db_auth:
