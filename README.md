@@ -8,7 +8,7 @@ Authentication microservice with system of roles, OAuth, tests.
 * ![Jaeger][Jaeger]
 * ![Uvicorn][Uvicorn]
 
-### Scheme of services
+### OpenAPI
 <image src="readme/openapi.png" alt="OpenAPI"> </image>
 
 
